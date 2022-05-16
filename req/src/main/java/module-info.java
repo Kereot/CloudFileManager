@@ -1,0 +1,3 @@
+module req {
+    exports reqs;
+}

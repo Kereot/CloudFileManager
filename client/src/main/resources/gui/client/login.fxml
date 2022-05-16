@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="gui.client.Controller">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+
+    <MenuBar>
+        <Menu text="Main">
+<!--            <MenuItem text="Sign Up" onAction="#registerBtnAction" />-->
+            <MenuItem onAction="#btnExitAction" text="Exit" />
+        </Menu>
+    </MenuBar>
+
+    <VBox alignment="CENTER" spacing="20.0" VBox.vgrow="ALWAYS" xmlns:fx="http://javafx.com/fxml">
+        <Label text="Login" />
+        <TextField fx:id="loginField" maxWidth="320" promptText="Enter login" />
+        <Label text="Password" />
+        <PasswordField fx:id="passwordField" maxWidth="320" promptText="Enter password" />
+    </VBox>
+
+
+    <HBox spacing="5">
+        <Button defaultButton="true" maxWidth="Infinity" onAction="#loginBtnAction" text="Sign In" HBox.hgrow="ALWAYS" />
+    </HBox>
+
+
+</VBox>
