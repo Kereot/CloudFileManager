@@ -1,12 +1,12 @@
 package gui.client;
 
-import gui.client.requests.AuthRequest;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.net.URL;
@@ -21,6 +21,9 @@ import java.util.ResourceBundle;
 public class ServerController implements Initializable {
 
     public static List<File> list = new ArrayList<>();
+
+    @FXML
+    public VBox wholeWindowServer;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -74,7 +77,7 @@ public class ServerController implements Initializable {
         });
 
         serverList(list);
-        Controller.rememberMe(this);
+        Controller.rememberServerController(this);
     }
 
     public void setTextFiled(String path) {
@@ -116,7 +119,7 @@ public class ServerController implements Initializable {
 
     public void btnParentPathAction(ActionEvent actionEvent) {
         if (pathField.getText().contains(Character.toString(COMPLEX_PATH))) {
-            Path path = Paths.get(pathField.getText().substring(0, pathField.getText().lastIndexOf(COMPLEX_PATH)));
+            Path path = Paths.get(getCurrentPath().substring(0, getCurrentPath().lastIndexOf(COMPLEX_PATH)));
             HashMap<String, String> listRequest = new HashMap<>();
             listRequest.put("type", "dir");
             listRequest.put("path", path.toString());
@@ -125,13 +128,13 @@ public class ServerController implements Initializable {
     }
 
     public String getSelectedName() {
-        if (!mainTable.isFocused()) {
+        if (!mainTable.isFocused() || mainTable.getSelectionModel().getSelectedItem() == null) {
             return null;
         }
         return mainTable.getSelectionModel().getSelectedItem().getName();
     }
 
-//    public String getCurrentPath() {
-//        return pathField.getText();
-//    }
+    public String getCurrentPath() {
+        return pathField.getText();
+    }
 }
