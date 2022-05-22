@@ -2,10 +2,7 @@ package gui.client;
 
 import gui.client.requests.AuthRequest;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -42,7 +39,7 @@ public class ClientNetty {
 //    }
 
 
-    public void connect(AuthRequest authRequestBuilder, ActionEvent actionEvent) throws InterruptedException {
+    public void connect(AuthRequest authRequestBuilder, ActionEvent actionEvent, Controller controller) throws InterruptedException {
         new Thread(() -> {
             EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
             try {
@@ -57,10 +54,9 @@ public class ClientNetty {
                             @Override
                             protected void initChannel(SocketChannel socketChannel) {
                                 socketChannel.pipeline().addLast(
-                                        new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                        new ObjectDecoder(20000000, ClassResolvers.cacheDisabled(null)),
                                         new ObjectEncoder(),
-                                        new ClientHandlerNetty(actionEvent, new Controller())
-//                        new ClientHandlerWork()
+                                        new ClientHandlerNetty(actionEvent, controller)
                                 );
                             }
                         });
@@ -69,6 +65,7 @@ public class ClientNetty {
                 channel.writeAndFlush(credentials);
                 elg = eventLoopGroup;
                 hasConnected = true;
+
 
                 channelFuture.channel().closeFuture().sync();
             } catch (Exception e) {
@@ -84,10 +81,6 @@ public class ClientNetty {
         System.out.println("Tried to send smth");
         System.out.println(obj);
         System.out.println(obj.getClass());
-    }
-
-    public static void test(){
-            channel.writeAndFlush("!!!");
     }
 
     public static void disconnect() {

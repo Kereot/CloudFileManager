@@ -29,8 +29,8 @@
 
     
     <HBox spacing="5">
-        <Button text="Copy" maxWidth="Infinity" focusTraversable="false" HBox.hgrow="ALWAYS" onAction="#copyBtnAction"/>
-        <Button text="Move" maxWidth="Infinity" focusTraversable="false" HBox.hgrow="ALWAYS" onAction="#transferBtnAction" />
+        <Button text="Copy File" fx:id="copyBtn" maxWidth="Infinity" focusTraversable="false" HBox.hgrow="ALWAYS" onAction="#copyBtnAction"/>
+        <Button text="Create Folder" maxWidth="Infinity" focusTraversable="false" HBox.hgrow="ALWAYS" onAction="#folderBtnAction" />
         <Button text="Delete" maxWidth="Infinity" focusTraversable="false" HBox.hgrow="ALWAYS" onAction="#deleteBtnAction" />
     </HBox>
 

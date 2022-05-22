@@ -1,12 +1,12 @@
 package gui.client;
 
-import gui.client.requests.AuthRequest;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.net.URL;
@@ -21,6 +21,9 @@ import java.util.ResourceBundle;
 public class ServerController implements Initializable {
 
     public static List<File> list = new ArrayList<>();
+
+    @FXML
+    public VBox wholeWindowServer;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -55,12 +58,6 @@ public class ServerController implements Initializable {
         mainTable.getColumns().addAll(filesNameColumn, filesSizeColumn, filesDateColumn);
         mainTable.getSortOrder().add(filesSizeColumn);
 
-//        drivesBox.getItems().clear();
-//        for (Path p : FileSystems.getDefault().getRootDirectories()) {
-//            drivesBox.getItems().add(p.toString());
-//        }
-//        drivesBox.getSelectionModel().select(0);
-
         mainTable.setOnMouseClicked(mouseEvent -> {
             if (mouseEvent.getClickCount() == 2 && mainTable.getSelectionModel().getSelectedItem() != null) {
                 Path path = Paths.get(pathField.getText()).resolve(mainTable.getSelectionModel().getSelectedItem().getName());
@@ -74,24 +71,12 @@ public class ServerController implements Initializable {
         });
 
         serverList(list);
-        Controller.rememberMe(this);
+        Controller.rememberServerController(this);
     }
 
     public void setTextFiled(String path) {
         pathField.setText(path);
     }
-
-//    public void list(Path path) {
-//        try {
-//            pathField.setText(path.normalize().toAbsolutePath().toString());
-//            mainTable.getItems().clear();
-//            mainTable.getItems().addAll(Files.list(path).map(FilesInfo::new).toList());
-//            mainTable.sort();
-//        } catch (IOException e) {
-//            Alert alert = new Alert(Alert.AlertType.WARNING, "Files list update failed", ButtonType.OK);
-//            alert.showAndWait();
-//        }
-//    }
 
     public void serverList(List<File> list) {
             mainTable.getItems().clear();
@@ -112,11 +97,9 @@ public class ServerController implements Initializable {
     @FXML
     TextField pathField;
 
-    private final char COMPLEX_PATH = 92;
-
     public void btnParentPathAction(ActionEvent actionEvent) {
-        if (pathField.getText().contains(Character.toString(COMPLEX_PATH))) {
-            Path path = Paths.get(pathField.getText().substring(0, pathField.getText().lastIndexOf(COMPLEX_PATH)));
+        if (Paths.get(getCurrentPath()).getParent() != null) {
+            Path path = Paths.get(getCurrentPath()).getParent();
             HashMap<String, String> listRequest = new HashMap<>();
             listRequest.put("type", "dir");
             listRequest.put("path", path.toString());
@@ -125,13 +108,13 @@ public class ServerController implements Initializable {
     }
 
     public String getSelectedName() {
-        if (!mainTable.isFocused()) {
+        if (!mainTable.isFocused() || mainTable.getSelectionModel().getSelectedItem() == null) {
             return null;
         }
         return mainTable.getSelectionModel().getSelectedItem().getName();
     }
 
-//    public String getCurrentPath() {
-//        return pathField.getText();
-//    }
+    public String getCurrentPath() {
+        return pathField.getText();
+    }
 }
