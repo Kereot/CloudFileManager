@@ -1,9 +1,7 @@
 package gui.client;
 
 import gui.client.requests.AuthRequest;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.stream.ChunkedInput;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -22,15 +20,13 @@ import org.apache.commons.io.FileUtils;
 import reqs.*;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 
 public class Controller {
@@ -45,22 +41,6 @@ public class Controller {
         }
         Platform.exit();
     }
-
-//    private String getClientSelectedFileName() {
-//        if (!panelController.mainTable.isFocused()) {
-//            return null;
-//        } else {
-//            return panelController.mainTable.getSelectionModel().getSelectedItem().getName();
-//        }
-//    }
-//
-//    private String getServerSelectedFileName() {
-//        if (!serverController.mainTable.isFocused()) {
-//            return null;
-//        } else {
-//            return serverController.mainTable.getSelectionModel().getSelectedItem().getName();
-//        }
-//    }
 
     public void copyBtnAction(ActionEvent actionEvent) {
         String clientFileName = panelController.getSelectedName();
@@ -127,118 +107,130 @@ public class Controller {
     private final EventHandler<InputEvent> filter = Event::consume;
     private final EventHandler<MouseEvent> filter2 = Event::consume;
 
-    public void transferBtnAction(ActionEvent actionEvent) { // some testing
-//        wholeWindow.setMouseTransparent(true);
-//        wholeWindow.setFocusTraversable(false);
-//        wholeWindow.addEventFilter(KeyEvent.ANY, filter);
-//        try {
-//            PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctrl");
-//            PanelController rightPC = (PanelController) rightPanel.getProperties().get("srv");
+    public void folderBtnAction(ActionEvent actionEvent) {
+        if (!panelController.mainTable.isFocused() && !serverController.mainTable.isFocused()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please, select a side where a new folder is to be created", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+        TextInputDialog dialog = new TextInputDialog("Folder");
+
+        dialog.setTitle(null);
+        dialog.setHeaderText("Enter a folder name:");
+        dialog.setContentText("Folder:");
+
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isEmpty()) {
+            return;
+        }
+//            dialog.showAndWait();
 //
-//            PanelController srcPC = null;
-//            PanelController dstPC = null;
-//            if (leftPC.getSelectedName() != null) {
-//                srcPC = leftPC;
-//                dstPC = rightPC;
+//            if (dialog.getEditor().getText() == null) {
+//                return;
 //            }
-//            if (rightPC.getSelectedName() != null) {
-//                srcPC = rightPC;
-//                dstPC = leftPC;
-//            }
 //
-//            Path srcPath = Paths.get(srcPC.getCurrentPath(), srcPC.getSelectedName());
-//            Path dstPath = Paths.get(dstPC.getCurrentPath()).resolve(srcPath.getFileName().toString());
-//            try {
-//                Files.move(srcPath, dstPath);
-//                dstPC.list(Paths.get(dstPC.getCurrentPath()));
-//                srcPC.list(Paths.get(srcPC.getCurrentPath()));
-//            } catch (FileAlreadyExistsException e) {
-//                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "A file with the same name already exists! Do you want to replace it with the new file?");
-//                Optional<ButtonType> option = alert.showAndWait();
+        Pattern regex = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!-]");
 //
-//                if (option.get() == ButtonType.OK) {
-//                    try {
-//                        Files.move(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING);
-//                        dstPC.list(Paths.get(dstPC.getCurrentPath()));
-//                        srcPC.list(Paths.get(srcPC.getCurrentPath()));
-//                    } catch (IOException ex) {
-//                        ex.printStackTrace();
+//            dialog.contentTextProperty().addListener(new ChangeListener<String>() {
+//                @Override
+//                public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
+//                    if (regex.matcher(t1).find() || t1.length() > 7) {
+//                        dialog.setContentText(s);
 //                    }
-//                } else if (option.get() == ButtonType.CANCEL) {
-//                    Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-//                    alert1.showAndWait();
-//                } else {
-//                    Alert alert2 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-//                    alert2.showAndWait();
 //                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        } catch (NullPointerException e) {
-//            Alert alert = new Alert(Alert.AlertType.WARNING, CommonMessages.INACTIVE, ButtonType.OK);
-//            alert.showAndWait();
-//        }
+//            });
+        if (regex.matcher(dialog.getEditor().getText()).find() || dialog.getEditor().getText().length() > 15) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please, don't use special symbols or more than 15 characters", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+        if (panelController.mainTable.isFocused()) {
+            createClientFolder(dialog);
+        } else {
+            createServerFolder(dialog);
+        }
     }
+
+    private void createClientFolder(TextInputDialog dialog) {
+        Path path = Paths.get(panelController.getCurrentPath()).resolve(Paths.get(dialog.getEditor().getText()));
+
+        if (Files.exists(path)) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "A folder with the same name already exists!", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            Files.createDirectory(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        panelController.list(path.getParent());
+    }
+
+    private void createServerFolder(TextInputDialog dialog) {
+        String path = serverController.getCurrentPath();
+        ClientNetty.send(new CreateFolderRequest(path, dialog.getEditor().getText()));
+    }
+
+    public void failedToCreateServerFolder(String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING, message, ButtonType.OK);
+        alert.showAndWait();
+    }
+
+
 
     public void deleteBtnAction(ActionEvent actionEvent) { // some testing
-//        wholeWindow.removeEventFilter(KeyEvent.ANY, filter);
-//        try {
-//            PanelController leftPC = (PanelController) leftPanel.getProperties().get("ctrl");
-//            PanelController rightPC = (PanelController) rightPanel.getProperties().get("srv");
-//
-//            PanelController srcPC = null;
-//            if (leftPC.getSelectedName() != null) {
-//                srcPC = leftPC;
-//            }
-//            if (rightPC.getSelectedName() != null) {
-//                srcPC = rightPC;
-//            }
-//
-//            Path srcPath = Paths.get(srcPC.getCurrentPath(), srcPC.getSelectedName());
-//            if (Files.isDirectory(srcPath)) {
-//                deleteDir(srcPath, srcPC);
-//            } else {
-//                deleteFile(srcPath, srcPC);
-//            }
-//        } catch (NullPointerException e) {
-//            Alert alert = new Alert(Alert.AlertType.WARNING, CommonMessages.INACTIVE, ButtonType.OK);
-//            alert.showAndWait();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    private void deleteFile(Path srcPath, PanelController srcPC) throws IOException {
-//        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete the file?");
-//        Optional<ButtonType> option = alert.showAndWait();
-//
-//        if (option.get() == ButtonType.OK) {
-//            Files.deleteIfExists(srcPath);
-//            srcPC.list(Paths.get(srcPC.getCurrentPath()));
-//        } else if (option.get() == ButtonType.CANCEL) {
-//            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-//            alert1.showAndWait();
-//        } else {
-//            Alert alert2 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-//            alert2.showAndWait();
-//        }
-    }
-
-    private void deleteDir(Path srcPath, PanelController srcPC) throws IOException {
-        File srcFile = new File(String.valueOf(srcPath));
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete the folder?");
+        if (panelController.getSelectedName() == null && serverController.getSelectedName() == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please, select a file or a folder to be deleted", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete the object? This action cannot be undone!");
         Optional<ButtonType> option = alert.showAndWait();
 
         if (option.get() == ButtonType.OK) {
-            FileUtils.deleteDirectory(srcFile);
-            srcPC.list(Paths.get(srcPC.getCurrentPath()));
+            System.out.println("Trying to delete an object");
         } else if (option.get() == ButtonType.CANCEL) {
             Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
             alert1.showAndWait();
-        } else {
-            Alert alert2 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-            alert2.showAndWait();
+            return;
         }
+        if (panelController.mainTable.isFocused()) {
+            if (panelController.mainTable.getSelectionModel().getSelectedItem().getType().equals(FilesInfo.ObjectType.FILE)) {
+                deleteClientFile();
+            } else {
+                deleteClientDir();
+            }
+        } else {
+            if (serverController.mainTable.getSelectionModel().getSelectedItem().getType().equals(FilesInfo.ObjectType.FILE)) {
+                ClientNetty.send(new DeleteObjectRequest("file", serverController.getCurrentPath(), serverController.getSelectedName()));
+            } else {
+                ClientNetty.send(new DeleteObjectRequest("dir", serverController.getCurrentPath(), serverController.getSelectedName()));
+            }
+        }
+    }
+
+    private void deleteClientFile() {
+        Path path = Paths.get(panelController.getCurrentPath());
+        try {
+            Files.deleteIfExists(path.resolve(Paths.get(panelController.getSelectedName())));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        panelController.list(path);
+    }
+
+    private void deleteClientDir() {
+        Path path = Paths.get(panelController.getCurrentPath());
+        File dir = new File(String.valueOf(path.resolve(Paths.get(panelController.getSelectedName()))));
+        try {
+            FileUtils.deleteDirectory(dir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        panelController.list(path);
     }
 
     @FXML
@@ -379,13 +371,15 @@ public class Controller {
         }
     }
 
-    public void updateServerListAfterFileAcquisition() {
+    public void updateServerListAfterSomeAction() {
         HashMap<String, String> listRequest = new HashMap<>();
         listRequest.put("type", "dir");
         listRequest.put("path", serverController.getCurrentPath());
         ClientNetty.send(listRequest);
-        savingCopyBtn.setDisable(false);
-        savingCopyBtn = null;
+        if (savingCopyBtn != null) {
+            savingCopyBtn.setDisable(false);
+            savingCopyBtn = null;
+        }
     }
 
     public void sendFileToServerAfterConfirmation(ChannelHandlerContext ctx, Path pathToSend, Path pathToPlace) {

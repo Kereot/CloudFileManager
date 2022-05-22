@@ -3,8 +3,10 @@ package server;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.apache.commons.io.FileUtils;
 import reqs.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,12 +39,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HashMap<?,?> message) {
             String type = (String) message.get("type");
             switch (type) {
-                case "auth":
-                    authentication(ctx, message);
-                    break;
-                case "dir":
-                    updateList(ctx, message);
-                    break;
+                case "auth" -> authentication(ctx, message);
+                case "dir" -> updateList(ctx, message);
             }
         }
         if (msg instanceof FileTransferRequest message) {
@@ -65,6 +63,16 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         }
         if (msg instanceof FileLastChunk message) {
             copyLargeFileFromClientEnd(ctx, message);
+        }
+        if (msg instanceof CreateFolderRequest message) {
+            createFolder(ctx, message);
+        }
+        if (msg instanceof DeleteObjectRequest message) {
+            String type = message.type();
+            switch (type) {
+                case "file" -> deleteServerFile(ctx, message);
+                case "dir" -> deleteServerDir(ctx, message);
+            }
         }
 
         LOGGER.warning("This request received: " + msg.getClass());
@@ -180,7 +188,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            ctx.writeAndFlush(new FileWrittenToServer());
+            ctx.writeAndFlush(new ServerFinishedTask());
         }
 
     }
@@ -209,8 +217,59 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            ctx.writeAndFlush(new FileWrittenToServer());
+            ctx.writeAndFlush(new ServerFinishedTask());
         }
+    }
+
+    private void createFolder(ChannelHandlerContext ctx, CreateFolderRequest message) {
+        Path folderOnServerSide = PATH.toAbsolutePath().resolve(Paths.get(message.path()));
+        Path targetFolder = folderOnServerSide.resolve(Paths.get(message.name()));
+        if (message.name().equals(rootPath.getFileName().toString())) {
+            ctx.writeAndFlush(new CreateFolderNegative("Sorry, you can't create a folder with the same name as your login!"));
+            return;
+        }
+        if (Files.exists(targetFolder)) {
+            ctx.writeAndFlush(new CreateFolderNegative("A folder with the same name already exists!"));
+            return;
+        }
+        int i = 0;
+        Path checkPath = folderOnServerSide;
+        final int SUBDIR_LIMIT = 3;
+        while (!checkPath.equals(rootPath.toAbsolutePath())) {
+            checkPath = folderOnServerSide.getParent();
+            i += 1;
+            if (i == SUBDIR_LIMIT) {
+                ctx.writeAndFlush(new CreateFolderNegative("Sorry, you can't create another layer of subfolders!"));
+                return;
+            }
+        }
+        try {
+            Files.createDirectory(targetFolder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ctx.writeAndFlush(new ServerFinishedTask());
+    }
+
+    private void deleteServerFile(ChannelHandlerContext ctx, DeleteObjectRequest message) {
+        Path targetFile = PATH.toAbsolutePath().resolve(Paths.get(message.path(), message.name()));
+        try {
+            Files.deleteIfExists(targetFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ctx.writeAndFlush(new ServerFinishedTask());
+    }
+
+    private void deleteServerDir(ChannelHandlerContext ctx, DeleteObjectRequest message) {
+        Path targetFile = PATH.toAbsolutePath().resolve(Paths.get(message.path(), message.name()));
+        File dir = new File(String.valueOf(targetFile));
+        try {
+            FileUtils.deleteDirectory(dir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ctx.writeAndFlush(new ServerFinishedTask());
     }
 }
 

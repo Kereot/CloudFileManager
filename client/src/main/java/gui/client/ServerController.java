@@ -58,12 +58,6 @@ public class ServerController implements Initializable {
         mainTable.getColumns().addAll(filesNameColumn, filesSizeColumn, filesDateColumn);
         mainTable.getSortOrder().add(filesSizeColumn);
 
-//        drivesBox.getItems().clear();
-//        for (Path p : FileSystems.getDefault().getRootDirectories()) {
-//            drivesBox.getItems().add(p.toString());
-//        }
-//        drivesBox.getSelectionModel().select(0);
-
         mainTable.setOnMouseClicked(mouseEvent -> {
             if (mouseEvent.getClickCount() == 2 && mainTable.getSelectionModel().getSelectedItem() != null) {
                 Path path = Paths.get(pathField.getText()).resolve(mainTable.getSelectionModel().getSelectedItem().getName());
@@ -84,18 +78,6 @@ public class ServerController implements Initializable {
         pathField.setText(path);
     }
 
-//    public void list(Path path) {
-//        try {
-//            pathField.setText(path.normalize().toAbsolutePath().toString());
-//            mainTable.getItems().clear();
-//            mainTable.getItems().addAll(Files.list(path).map(FilesInfo::new).toList());
-//            mainTable.sort();
-//        } catch (IOException e) {
-//            Alert alert = new Alert(Alert.AlertType.WARNING, "Files list update failed", ButtonType.OK);
-//            alert.showAndWait();
-//        }
-//    }
-
     public void serverList(List<File> list) {
             mainTable.getItems().clear();
             List<FilesInfo> serverList = list.stream()
@@ -115,11 +97,9 @@ public class ServerController implements Initializable {
     @FXML
     TextField pathField;
 
-    private final char COMPLEX_PATH = 92;
-
     public void btnParentPathAction(ActionEvent actionEvent) {
-        if (pathField.getText().contains(Character.toString(COMPLEX_PATH))) {
-            Path path = Paths.get(getCurrentPath().substring(0, getCurrentPath().lastIndexOf(COMPLEX_PATH)));
+        if (Paths.get(getCurrentPath()).getParent() != null) {
+            Path path = Paths.get(getCurrentPath()).getParent();
             HashMap<String, String> listRequest = new HashMap<>();
             listRequest.put("type", "dir");
             listRequest.put("path", path.toString());
