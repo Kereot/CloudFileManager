@@ -4,28 +4,19 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import reqs.Auth;
-import reqs.DirInfo;
-import reqs.PassServerPath;
+import reqs.*;
+
+import java.nio.file.Paths;
 
 public class ClientHandlerNetty extends ChannelInboundHandlerAdapter {
 
     private Controller mc;
     private ActionEvent actionEvent;
 
-//    public ClientHandlerNetty(ActionEvent actionEvent) {
-//        ClientHandlerNetty.actionEvent = actionEvent;
-//    }
-
     public ClientHandlerNetty(ActionEvent actionEvent, Controller mc) {
         this.actionEvent = actionEvent;
         this.mc = mc;
     }
-
-//    public ClientHandlerNetty(ActionEvent actionEvent, ServerController sc) {
-//        this.actionEvent = actionEvent;
-//        this.sc = sc;
-//    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -34,23 +25,46 @@ public class ClientHandlerNetty extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof Auth message) {
-                Platform.runLater(() -> {
-                    mc.buildMainScene(actionEvent, message.authList());
-//                    Controller.buildMainScene(actionEvent, message.authList());
-                });
+        System.out.println("Got that: " + msg.getClass());
+        if (msg instanceof AuthSuccess message) {
+            Platform.runLater(() -> mc.buildMainScene(actionEvent, message.authList()));
         }
         if (msg instanceof DirInfo message) {
-            Platform.runLater(() -> {
-               mc.updateList(message.dirInfoList());
-            });
+            Platform.runLater(() -> mc.updateServerList(message.dirInfoList()));
         }
         if (msg instanceof PassServerPath message) {
-            Platform.runLater(() -> {
-                mc.setServerPath(message.currentServerPath());
-            });
+            Platform.runLater(() -> mc.setServerPath(message.currentServerPath()));
         }
-//        ctx.close();
+        if (msg instanceof byte[] message) {
+            Platform.runLater(() -> mc.copySmallFileFromServer(message));
+        }
+        if (msg instanceof FileFirstChunk message) {
+            Platform.runLater(() -> mc.copyLargeFileFromServerStart(message));
+        }
+        if (msg instanceof FileChunk message) {
+            Platform.runLater(() -> mc.copyLargeFileFromServerMiddle(message));
+        }
+        if (msg instanceof FileLastChunk message) {
+            Platform.runLater(() -> mc.copyLargeFileFromServerEnd(message));
+        }
+        if (msg instanceof FilePushReply message) {
+            switch (message.string()) {
+                case "OK" ->
+                        Platform.runLater(() ->
+                                mc.sendFileToServer(ctx, Paths.get(message.fileToSend()), Paths.get(message.fileToPlace())));
+                case "EXISTS" ->
+                        Platform.runLater(() ->
+                                mc.sendFileToServerAfterConfirmation(ctx, Paths.get(message.fileToSend()), Paths.get(message.fileToPlace())));
+            }
+        }
+        if (msg instanceof ServerFinishedTask) {
+            Platform.runLater(() -> mc.updateServerListAfterSomeAction());
+        }
+
+        if (msg instanceof ServerRequestNegative message){
+            Platform.runLater(() -> mc.failedToCompleteServerRequest(message.string()));
+        }
+//        ctx.close(); // I'm not sure when it should be closed if at all.
     }
 
 

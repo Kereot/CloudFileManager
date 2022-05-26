@@ -11,7 +11,6 @@
 
     <MenuBar>
         <Menu text="Main">
-<!--            <MenuItem text="Sign Up" onAction="#registerBtnAction" />-->
             <MenuItem onAction="#btnExitAction" text="Exit" />
         </Menu>
     </MenuBar>
@@ -26,6 +25,7 @@
 
     <HBox spacing="5">
         <Button defaultButton="true" maxWidth="Infinity" onAction="#loginBtnAction" text="Sign In" HBox.hgrow="ALWAYS" />
+        <Button maxWidth="Infinity" onAction="#regBtnAction" text="Sign Up" HBox.hgrow="ALWAYS" />
     </HBox>
 
 

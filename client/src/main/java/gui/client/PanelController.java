@@ -6,6 +6,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 import java.io.IOException;
 import java.net.URL;
@@ -17,6 +18,17 @@ import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
 
 public class PanelController implements Initializable {
+    @FXML
+    public VBox wholeWindowClient;
+
+    @FXML
+    TableView<FilesInfo> mainTable;
+
+    @FXML
+    ComboBox<String> drivesBox;
+
+    @FXML
+    TextField pathField;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -67,7 +79,7 @@ public class PanelController implements Initializable {
         });
 
         list(Paths.get("."));
-
+        Controller.rememberPanelController(this);
     }
 
     public void list(Path path) {
@@ -82,15 +94,6 @@ public class PanelController implements Initializable {
         }
     }
 
-    @FXML
-    TableView<FilesInfo> mainTable;
-
-    @FXML
-    ComboBox<String> drivesBox;
-
-    @FXML
-    TextField pathField;
-
     public void btnParentPathAction(ActionEvent actionEvent) {
         Path parentPath = Paths.get(pathField.getText()).getParent();
         if (parentPath != null) {
@@ -104,7 +107,7 @@ public class PanelController implements Initializable {
     }
 
     public String getSelectedName() {
-        if (!mainTable.isFocused()) {
+        if (!mainTable.isFocused() || mainTable.getSelectionModel().getSelectedItem() == null) {
             return null;
         }
         return mainTable.getSelectionModel().getSelectedItem().getName();

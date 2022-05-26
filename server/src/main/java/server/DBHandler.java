@@ -1,3 +1,5 @@
+package server;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -19,7 +21,6 @@ public class DBHandler {
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "EXCEPTION!", e);
-//                e.printStackTrace();
         }
     }
 

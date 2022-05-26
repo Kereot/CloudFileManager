@@ -1,3 +1,5 @@
+package server;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -32,21 +34,23 @@ public class ServerMain {
                         public void initChannel(SocketChannel socketChannel) {
                             ChannelPipeline inbound = socketChannel.pipeline();
                             inbound.addLast(
-                                    new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
+                                    new ObjectDecoder(20000000, ClassResolvers.cacheDisabled(null)),
                                     new ObjectEncoder(),
                                     new ServerHandler()
                             );
                         }
                     });
             ChannelFuture channelFuture = serverBootstrap.bind(PORT).sync();
-            LOGGER.warning("Server started!");
+            LOGGER.info("Server started!");
             DBHandler.connect();
-            LOGGER.warning("DB connected!");
-//            channelFuture.channel().closeFuture().sync();
+            LOGGER.info("DB connected!");
+//            channelFuture.channel().closeFuture().sync(); // I'm not sure if it's needed.
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "EXCEPTION!", e);
+            e.printStackTrace();
         }
-//        finally {
+//        finally { // I'm not sure when it should be closed if at all.
+//            DBHandler.disconnect();
 //            workerGroup.shutdownGracefully();
 //            bossGroup.shutdownGracefully();
 //        }
