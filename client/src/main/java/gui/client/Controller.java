@@ -1,6 +1,5 @@
 package gui.client;
 
-import gui.client.requests.AuthRequest;
 import io.netty.channel.ChannelHandlerContext;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -16,6 +15,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import org.apache.commons.io.FileUtils;
 import reqs.*;
 
@@ -32,14 +32,40 @@ import java.util.regex.Pattern;
 public class Controller {
 
     @FXML
+    VBox leftPanel, rightPanel;
+
+    @FXML
+    TextField loginField;
+
+    @FXML
+    PasswordField passwordField;
+
+    @FXML
+    MenuBar barParent;
+
+    @FXML
     public Button copyBtn;
     private static Button savingCopyBtn = new Button();
 
-    public void btnExitAction(ActionEvent actionEvent) {
+    public void btnExitAction() {
         if (ClientNetty.hasConnected()) {
             ClientNetty.disconnect();
         }
         Platform.exit();
+    }
+
+    private ClientNetty nt = new ClientNetty();
+
+    private final EventHandler<InputEvent> filter = Event::consume;
+    private final EventHandler<MouseEvent> filter2 = Event::consume;
+
+    private static ServerController serverController;
+    private static PanelController panelController;
+    public static void rememberServerController(ServerController sc) {
+        serverController = sc;
+    }
+    public static void rememberPanelController(PanelController pc) {
+        panelController = pc;
     }
 
     public void copyBtnAction(ActionEvent actionEvent) {
@@ -57,7 +83,7 @@ public class Controller {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "A file with the same name already exists! Do you want to replace it with the new file?");
                 Optional<ButtonType> option = alert.showAndWait();
                 if (option.get() == ButtonType.CANCEL) {
-                    Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
+                    Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Operation aborted");
                     alert1.showAndWait();
                     return;
                 }
@@ -80,33 +106,6 @@ public class Controller {
         }
     }
 
-    private void copyDir(Path srcPath, Path dstPath, PanelController dstPC) {
-        File srcFile = new File(String.valueOf(srcPath));
-        File dstFile = new File(String.valueOf(dstPath));
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "In respected folders this will replace files with the same names if any. Proceed?");
-        Optional<ButtonType> option = alert.showAndWait();
-        if (option.get() == ButtonType.OK) {
-            try {
-                FileUtils.copyDirectory(srcFile, dstFile);
-                dstPC.list(Paths.get(dstPC.getCurrentPath()));
-            } catch (IllegalArgumentException a) {
-                Alert alert1 = new Alert(Alert.AlertType.ERROR, "Some objects to be replaced must have 'Read only' tag or be otherwise protected. Operation failed fully or partially!");
-                alert1.showAndWait();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        } else if (option.get() == ButtonType.CANCEL) {
-            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-            alert1.showAndWait();
-        } else {
-            Alert alert2 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
-            alert2.showAndWait();
-        }
-    }
-
-    private final EventHandler<InputEvent> filter = Event::consume;
-    private final EventHandler<MouseEvent> filter2 = Event::consume;
-
     public void folderBtnAction(ActionEvent actionEvent) {
         if (!panelController.mainTable.isFocused() && !serverController.mainTable.isFocused()) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Please, select a side where a new folder is to be created", ButtonType.OK);
@@ -124,22 +123,8 @@ public class Controller {
         if (result.isEmpty()) {
             return;
         }
-//            dialog.showAndWait();
-//
-//            if (dialog.getEditor().getText() == null) {
-//                return;
-//            }
-//
-        Pattern regex = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*()%!-]");
-//
-//            dialog.contentTextProperty().addListener(new ChangeListener<String>() {
-//                @Override
-//                public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
-//                    if (regex.matcher(t1).find() || t1.length() > 7) {
-//                        dialog.setContentText(s);
-//                    }
-//                }
-//            });
+
+        Pattern regex = Pattern.compile("[$&+,:;=\\\\?@#|/'<>.^*%!-]");
         if (regex.matcher(dialog.getEditor().getText()).find() || dialog.getEditor().getText().length() > 15) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Please, don't use special symbols or more than 15 characters", ButtonType.OK);
             alert.showAndWait();
@@ -160,7 +145,6 @@ public class Controller {
             alert.showAndWait();
             return;
         }
-
         try {
             Files.createDirectory(path);
         } catch (IOException e) {
@@ -174,14 +158,66 @@ public class Controller {
         ClientNetty.send(new CreateFolderRequest(path, dialog.getEditor().getText()));
     }
 
-    public void failedToCreateServerFolder(String message) {
+    public void failedToCompleteServerRequest(String message) {
         Alert alert = new Alert(Alert.AlertType.WARNING, message, ButtonType.OK);
         alert.showAndWait();
     }
 
+    public void renameBtnAction(ActionEvent actionEvent) {
+        if (panelController.getSelectedName() == null && serverController.getSelectedName() == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please, select a file or a folder to be renamed", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+        TextInputDialog dialog = new TextInputDialog("Name");
 
+        dialog.setTitle(null);
+        dialog.setHeaderText("Enter a new name:");
+        dialog.setContentText("Object:");
 
-    public void deleteBtnAction(ActionEvent actionEvent) { // some testing
+        Optional<String> result = dialog.showAndWait();
+
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Pattern regex = Pattern.compile("[$&+,:;=\\\\?@#|/'<>^*%!-]");
+        if (regex.matcher(dialog.getEditor().getText()).find() || dialog.getEditor().getText().length() > 15) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please, don't use special symbols or more than 15 characters", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+
+        if (panelController.mainTable.isFocused()) {
+            renameClient(dialog);
+        } else {
+            renameServer(dialog);
+        }
+    }
+
+    private void renameClient(TextInputDialog dialog) {
+        Path oldPath = Paths.get(panelController.getCurrentPath(), panelController.getSelectedName());
+        try {
+            Files.move(oldPath, oldPath.resolveSibling(dialog.getEditor().getText()));
+        } catch (FileAlreadyExistsException e) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "An object with the same name already exists!", ButtonType.OK);
+            alert.showAndWait();
+        } catch (IOException e) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Renaming failed for some reason!", ButtonType.OK);
+            alert.showAndWait();
+            e.printStackTrace();
+        }
+        panelController.list(Paths.get(panelController.getCurrentPath()));
+    }
+
+    private void renameServer(TextInputDialog dialog) {
+        String path = serverController.getCurrentPath();
+        String oldName = serverController.getSelectedName();
+        String newName = dialog.getEditor().getText();
+        ClientNetty.send(new RenameRequest(path, oldName, newName));
+    }
+
+    public void deleteBtnAction(ActionEvent actionEvent) {
         if (panelController.getSelectedName() == null && serverController.getSelectedName() == null) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Please, select a file or a folder to be deleted", ButtonType.OK);
             alert.showAndWait();
@@ -193,7 +229,7 @@ public class Controller {
         if (option.get() == ButtonType.OK) {
             System.out.println("Trying to delete an object");
         } else if (option.get() == ButtonType.CANCEL) {
-            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
+            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Operation aborted");
             alert1.showAndWait();
             return;
         }
@@ -233,22 +269,13 @@ public class Controller {
         panelController.list(path);
     }
 
-    @FXML
-    VBox leftPanel, rightPanel;
-
-    @FXML
-    TextField loginField;
-
-    @FXML
-    PasswordField passwordField;
-
-    private ClientNetty nt = new ClientNetty();
-
     public void loginBtnAction(ActionEvent actionEvent) {
         String login = loginField.getText();
-        int password = passwordField.getText().hashCode();
+        String password = passwordField.getText();
         if (login.isEmpty() || passwordField.getText().isEmpty()) {
-            return; // ToDo: some alert
+            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Login or password field is empty.");
+            alert1.showAndWait();
+            return;
         }
         try {
             nt.connect(new AuthRequest(login, password), actionEvent, this);
@@ -257,32 +284,47 @@ public class Controller {
         }
     }
 
+    public void regBtnAction(ActionEvent actionEvent) {
+        String login = loginField.getText();
+        String password = passwordField.getText();
+        if (login.isEmpty() || passwordField.getText().isEmpty()) {
+            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Login or password field is empty.");
+            alert1.showAndWait();
+            return;
+        }
+        try {
+            nt.regMe(new AuthRequest(login, password), this);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void regSuccess() {
+        Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Registration successful.");
+        ClientNetty.disconnect();
+        alert1.showAndWait();
+    }
+
+    public void regFailure(String message) {
+        Alert alert1 = new Alert(Alert.AlertType.INFORMATION, message);
+        ClientNetty.disconnect();
+        alert1.showAndWait();
+    }
+
     public void buildMainScene(ActionEvent actionEvent, List<?> list) {
         ServerController.list = (List<File>) list;
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(MainApp.class.getResource("main.fxml"));
-//            FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("server.fxml"));
             Scene scene = new Scene(fxmlLoader.load(), 1280, 600);
             Stage stage = new Stage();
             stage.setTitle("File Manager");
             stage.setScene(scene);
             stage.show();
+            stage.setOnCloseRequest(windowEvent -> btnExitAction());
             ((Node) (actionEvent.getSource())).getScene().getWindow().hide();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private static ServerController serverController;
-
-    private static PanelController panelController;
-
-    public static void rememberServerController(ServerController sc) {
-        serverController = sc;
-    }
-
-    public static void rememberPanelController(PanelController pc) {
-        panelController = pc;
     }
 
     public void updateServerList(List<File> list) {
@@ -358,8 +400,7 @@ public class Controller {
         stage.setScene(scene);
         stage.show();
     }
-    @FXML
-    MenuBar barParent;
+
     public void logoutBtnAction(ActionEvent actionEvent) {
         ClientNetty.disconnect();
         try {
@@ -386,7 +427,7 @@ public class Controller {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "A file with the same name already exists! Do you want to replace it with the new file?");
         Optional<ButtonType> option = alert.showAndWait();
         if (option.get() == ButtonType.CANCEL) {
-            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, CommonMessages.ABORT);
+            Alert alert1 = new Alert(Alert.AlertType.INFORMATION, "Operation aborted");
             alert1.showAndWait();
             savingCopyBtn.setDisable(false);
             savingCopyBtn = null;

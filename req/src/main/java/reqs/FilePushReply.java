@@ -1,7 +1,6 @@
 package reqs;
 
 import java.io.Serializable;
-import java.nio.file.Path;
 
 public record FilePushReply(String string, String fileToSend, String fileToPlace) implements Serializable {
 }

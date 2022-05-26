@@ -21,7 +21,6 @@ public class DBHandler {
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "EXCEPTION!", e);
-//                e.printStackTrace();
         }
     }
 

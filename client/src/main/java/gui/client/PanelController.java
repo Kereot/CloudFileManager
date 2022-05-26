@@ -21,6 +21,15 @@ public class PanelController implements Initializable {
     @FXML
     public VBox wholeWindowClient;
 
+    @FXML
+    TableView<FilesInfo> mainTable;
+
+    @FXML
+    ComboBox<String> drivesBox;
+
+    @FXML
+    TextField pathField;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         TableColumn<FilesInfo, String> filesNameColumn = new TableColumn<>("Name");
@@ -84,15 +93,6 @@ public class PanelController implements Initializable {
             alert.showAndWait();
         }
     }
-
-    @FXML
-    TableView<FilesInfo> mainTable;
-
-    @FXML
-    ComboBox<String> drivesBox;
-
-    @FXML
-    TextField pathField;
 
     public void btnParentPathAction(ActionEvent actionEvent) {
         Path parentPath = Paths.get(pathField.getText()).getParent();

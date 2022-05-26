@@ -25,6 +25,12 @@ public class ServerController implements Initializable {
     @FXML
     public VBox wholeWindowServer;
 
+    @FXML
+    TableView<FilesInfo> mainTable;
+
+    @FXML
+    TextField pathField;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         TableColumn<FilesInfo, String> filesNameColumn = new TableColumn<>("Name");
@@ -87,15 +93,6 @@ public class ServerController implements Initializable {
             mainTable.getItems().addAll(serverList);
             mainTable.sort();
     }
-
-    @FXML
-    TableView<FilesInfo> mainTable;
-
-    @FXML
-    ComboBox<String> drivesBox;
-
-    @FXML
-    TextField pathField;
 
     public void btnParentPathAction(ActionEvent actionEvent) {
         if (Paths.get(getCurrentPath()).getParent() != null) {

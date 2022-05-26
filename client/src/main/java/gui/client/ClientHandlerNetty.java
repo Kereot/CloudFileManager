@@ -13,19 +13,10 @@ public class ClientHandlerNetty extends ChannelInboundHandlerAdapter {
     private Controller mc;
     private ActionEvent actionEvent;
 
-//    public ClientHandlerNetty(ActionEvent actionEvent) {
-//        ClientHandlerNetty.actionEvent = actionEvent;
-//    }
-
     public ClientHandlerNetty(ActionEvent actionEvent, Controller mc) {
         this.actionEvent = actionEvent;
         this.mc = mc;
     }
-
-//    public ClientHandlerNetty(ActionEvent actionEvent, ServerController sc) {
-//        this.actionEvent = actionEvent;
-//        this.sc = sc;
-//    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -35,7 +26,7 @@ public class ClientHandlerNetty extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         System.out.println("Got that: " + msg.getClass());
-        if (msg instanceof Auth message) {
+        if (msg instanceof AuthSuccess message) {
             Platform.runLater(() -> mc.buildMainScene(actionEvent, message.authList()));
         }
         if (msg instanceof DirInfo message) {
@@ -70,10 +61,10 @@ public class ClientHandlerNetty extends ChannelInboundHandlerAdapter {
             Platform.runLater(() -> mc.updateServerListAfterSomeAction());
         }
 
-        if (msg instanceof CreateFolderNegative message){
-            Platform.runLater(() -> mc.failedToCreateServerFolder(message.string()));
+        if (msg instanceof ServerRequestNegative message){
+            Platform.runLater(() -> mc.failedToCompleteServerRequest(message.string()));
         }
-//        ctx.close();
+//        ctx.close(); // I'm not sure when it should be closed if at all.
     }
 
 
